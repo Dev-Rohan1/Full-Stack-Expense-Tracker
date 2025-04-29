@@ -6,10 +6,13 @@ import {
   getUserData,
 } from "../controllers/userController.js";
 
+import imageUploader from "../utils/imageUploader.js";
+import authMiddleware from "../middlewares/authMiddleware.js";
+
 const router = express.Router();
 
-router.post("/register-user", registerUser);
+router.post("/register-user", imageUploader.single("image"), registerUser);
 router.post("/login-user", loginUser);
-router.get("/user-data", getUserData);
+router.get("/user-data", authMiddleware, getUserData);
 
 export default router;
