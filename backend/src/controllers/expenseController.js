@@ -3,7 +3,7 @@ import xlsx from "xlsx";
 import Expense from "../models/Expense.js";
 
 export const addExpense = async (req, res) => {
-  const { icon, category, amount } = req.body;
+  const { icon, category, amount, date } = req.body;
   const userId = req.user?._id;
 
   if (!icon || !category || !amount) {
@@ -19,6 +19,7 @@ export const addExpense = async (req, res) => {
       icon,
       category,
       amount: amount,
+      date,
     });
 
     await newExpense.save();
@@ -39,13 +40,15 @@ export const addExpense = async (req, res) => {
 };
 
 export const getAllIExpenses = async (req, res) => {
+  const userId = req.user._id;
+
   try {
-    const income = await Expense.find();
+    const expense = await Expense.find({ userId });
 
     return res.json({
       success: false,
       message: "Expense fetched successfully",
-      expenseData: income,
+      expenseData: expense,
     });
   } catch (error) {
     console.log(error);
@@ -75,40 +78,5 @@ export const deleteExpense = async (req, res) => {
     console.error(error);
 
     return res.json({ success: false, message: "Failed to delete expense" });
-  }
-};
-
-export const downloadExpense = async (req, res) => {
-  const userId = req.user._id;
-
-  try {
-    const expenses = await Expense.find({ userId }).sort({ data: -1 });
-
-    const data = expenses.map((expense) => ({
-      icon: expense.icon,
-      category: expense.category,
-      amount: expense.amount,
-      date: expense.date,
-    }));
-
-    const workbook = xlsx.utils.book_new();
-    const worksheet = xlsx.utils.json_to_sheet(data);
-
-    xlsx.utils.book_append_sheet(workbook, worksheet, "Incomes");
-    xlsx.writeFile(workbook, "expenses.xlsx");
-
-    res.download("expenses.xlsx");
-
-    return res.json({
-      success: true,
-      message: "Expeneses downloaded successfully",
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.json({
-      success: false,
-      message: "Failed to download Expeneses",
-    });
   }
 };

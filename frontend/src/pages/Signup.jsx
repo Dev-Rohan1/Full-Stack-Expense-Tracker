@@ -1,7 +1,17 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import signup_image from "../assets/signup.svg";
-import { Mail, KeyRound, UserRound, Camera, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import {
+  Mail,
+  KeyRound,
+  UserRound,
+  Camera,
+  ArrowLeft,
+  LoaderCircle,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { AppContext } from "../contexts/AppContext";
+import { toast } from "react-hot-toast";
 
 const Signup = () => {
   const [step, setStep] = useState(1);
@@ -9,21 +19,11 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({
-          ...prev,
-          profileImage: file,
-          previewImage: reader.result,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const { backendUrl, setUserData, setUserToken } = useContext(AppContext);
+
+  const navigate = useNavigate();
 
   const nextStep = () => {
     if (name && email && password) {
@@ -33,6 +33,44 @@ const Signup = () => {
 
   const prevStep = () => {
     setStep(1);
+  };
+
+  const userSignupHanlder = async (e) => {
+    e.preventDefault();
+
+    if (!image) {
+      toast.error("Please upload a profile image.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("email", email);
+      formData.append("password", password);
+      formData.append("image", image);
+
+      const { data } = await axios.post(
+        `${backendUrl}/user/register-user`,
+        formData
+      );
+
+      if (data.success) {
+        setUserData(data.userData);
+        setUserToken(data.token);
+        localStorage.setItem("token", data.token);
+        toast.success(data.message);
+        navigate("/dashboard");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,7 +86,7 @@ const Signup = () => {
         </div>
 
         {/* Form Section */}
-        <div className="md:w-1/2 p-8 md:p-12">
+        <div className="md:w-1/2 px-5 py-6 md:p-12 w-full">
           <div className="text-center md:text-left mb-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">
               {step === 1 ? "Create Account" : "Upload Profile Picture"}
@@ -60,7 +98,7 @@ const Signup = () => {
             </p>
           </div>
 
-          <form>
+          <form onSubmit={userSignupHanlder}>
             {step === 1 ? (
               <div className="space-y-4">
                 {/* Name Input */}
@@ -137,7 +175,7 @@ const Signup = () => {
                   className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 ${
                     !name || !email || !password
                       ? "opacity-50 cursor-not-allowed"
-                      : "hover:shadow-md"
+                      : "cursor-pointer"
                   }`}
                   disabled={!name || !email || !password}
                 >
@@ -194,9 +232,16 @@ const Signup = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200"
+                    className={`${
+                      loading || !image ? "opacity-50 cursor-not-allowed" : ""
+                    } w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center`}
+                    disabled={loading || !image}
                   >
-                    Create Account
+                    {loading ? (
+                      <LoaderCircle className="animate-spin" />
+                    ) : (
+                      "Create Account"
+                    )}
                   </button>
                 </div>
               </div>
